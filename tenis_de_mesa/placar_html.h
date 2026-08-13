@@ -68,7 +68,7 @@ button{padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointe
 <button id='fullscreen-btn' onclick='toggleTelaCheia()'>⛶ TELA CHEIA</button>
 <button id='somBtn' onclick='toggleSom()'>🔇 SOM</button>
 <a id='cfgBtn' href='/config_camp' style='position:fixed;top:6px;left:10px;background:rgba(255,255,255,0.12);color:#ddd;border:1px solid #555;border-radius:8px;padding:8px 12px;font-size:20px;z-index:99;width:auto;text-decoration:none;line-height:1' title='Configurações'>⚙</a>
-<h1>PLACAR DIGITAL v1.0.2</h1>
+<h1>PLACAR DIGITAL v1.0.3</h1>
 <div id='batBadge' style='position:fixed;top:5px;right:8px;background:rgba(0,0,0,0.5);color:#4ade80;border-radius:6px;padding:3px 8px;font-size:12px;z-index:99;display:none;transform:translateZ(0);-webkit-transform:translateZ(0);will-change:transform'></div>
 <div id='wifiBadge' style='position:fixed;top:5px;left:50%;transform:translate(-50%,0);-webkit-transform:translate(-50%,0);background:rgba(0,0,0,0.5);color:#888;border-radius:6px;padding:3px 8px;font-size:12px;z-index:99;display:none;white-space:nowrap;will-change:transform' title='Conexão com o roteador'></div>
 <div id='confModal' style='position:fixed;inset:0;background:rgba(0,0,0,0.75);display:none;z-index:200;align-items:center;justify-content:center;flex-direction:column'>
@@ -106,7 +106,7 @@ button{padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointe
 <script>
 if(history&&history.scrollRestoration){history.scrollRestoration='manual'}
 var isSetF=false, fin=false, autoNextTimer=null, autoFinalTimer=null, wakeLock=null, wakeAudioCtx=null, wakeInterval=null, wakePing=null, wakeVideo=null, wakeOsc=null, wakeGain=null, flipped=false, somAtivo=false, antigoPA=-1, antigoPB=-1, ultimoH='', emJogando=false;
-var VERSAO_PAGINA=20, checadoVersao=false;
+var VERSAO_PAGINA=21, checadoVersao=false;
 
 var rolarAte=0;
 function rolarScroll(){function s(){try{var x=document.getElementById('topAnchor');if(x&&x.scrollIntoView)x.scrollIntoView()}catch(e){}window.scrollTo(0,0);try{window.scrollTo({top:0,left:0,behavior:'auto'})}catch(e){}if(document.body)document.body.scrollTop=0;if(document.documentElement)document.documentElement.scrollTop=0}s();s();setTimeout(s,40);setTimeout(s,120)}
