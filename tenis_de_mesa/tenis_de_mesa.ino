@@ -48,7 +48,7 @@ const unsigned long intervaloCheckCampeonato = 6000;
 
 // Atualização OTA via GitHub (repo público Jaum4010/PlacarPro)
 const String GITHUB_REPO = "Jaum4010/PlacarPro";   // usuário/repositório
-const String FIRMWARE_VER = "1.0.1";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
+const String FIRMWARE_VER = "1.0.2";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
 const unsigned long INTERVALO_OTA = 24UL * 60UL * 60UL * 1000UL;  // procura nova versão a cada 24h
 HTTPUpdate httpUpdatePro;
 WiFiClientSecure otaClient;  // para HTTPS (GitHub obriga TLS)
@@ -75,7 +75,7 @@ bool aguardandoInicio = false;   // tela "VS" (partida chamada, ainda não inici
 String nomeJogadorA = "Jogador A", nomeJogadorB = "Jogador B", msgStatus = "";
 String campeaoAtual = "";
 String avisoAtual = "";
-const int VERSAO_PAGINA = 19;   // incrementar a cada mudanca no JS servido (placar_html.h)
+const int VERSAO_PAGINA = 20;   // incrementar a cada mudanca no JS servido (placar_html.h)
 String historicoArquivo = "";
 String historicoJogoAtual = "";
 String setsDetalhados = "";
@@ -312,9 +312,9 @@ void enviarBateria() {
   if (WiFi.status() != WL_CONNECTED) return;
   lerBateria();
   int codigo = -1;
-  for (int tentativa = 0; tentativa < 3; tentativa++) {
+  for (int tentativa = 0; tentativa < 2; tentativa++) {
     HTTPClient http;
-    http.setTimeout(3000);
+    http.setTimeout(1500);
     http.begin("http://" + srvIP + ":5000/api/bateria");
     http.addHeader("Content-Type", "application/json");
     String payload = "{\"mesa\":\"" + ssidDaMesa() + "\",\"b\":" + String(percentualBateria)
@@ -322,7 +322,7 @@ void enviarBateria() {
     codigo = http.POST(payload);
     http.end();
     if (codigo >= 200 && codigo < 300) break;
-    delay(250);  // nova tentativa se a API falhar momentaneamente
+    delay(120);  // nova tentativa se a API falhar momentaneamente
   }
   Serial.print("Bateria enviada ao campeonato: ");
   Serial.print(percentualBateria);
@@ -382,7 +382,7 @@ bool verificarVersaoGithub(String& tagNova) {
   otaClient.setInsecure();  // não valida o certificado (aceitável p/ esta aplicação)
   String url = String("https://api.github.com/repos/") + GITHUB_REPO + "/releases/latest";
   if (!http.begin(otaClient, url)) return false;
-  http.setTimeout(10000);
+  http.setTimeout(5000);
   http.addHeader("User-Agent", "PlacarTenisMesa");  // API do GitHub exige User-Agent
   int codigo = http.GET();
   String corpo = http.getString();
