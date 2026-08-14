@@ -106,7 +106,7 @@ button{padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointe
 <script>
 if(history&&history.scrollRestoration){history.scrollRestoration='manual'}
 var isSetF=false, fin=false, autoNextTimer=null, autoFinalTimer=null, wakeLock=null, wakeAudioCtx=null, wakeInterval=null, wakePing=null, wakeVideo=null, wakeOsc=null, wakeGain=null, flipped=false, somAtivo=false, antigoPA=-1, antigoPB=-1, ultimoH='', emJogando=false;
-var VERSAO_PAGINA=21, checadoVersao=false;
+var VERSAO_PAGINA=22, checadoVersao=false;
 
 var rolarAte=0;
 function rolarScroll(){function s(){try{var x=document.getElementById('topAnchor');if(x&&x.scrollIntoView)x.scrollIntoView()}catch(e){}window.scrollTo(0,0);try{window.scrollTo({top:0,left:0,behavior:'auto'})}catch(e){}if(document.body)document.body.scrollTop=0;if(document.documentElement)document.documentElement.scrollTop=0}s();s();setTimeout(s,40);setTimeout(s,120)}
