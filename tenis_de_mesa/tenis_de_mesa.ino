@@ -51,7 +51,7 @@ const unsigned long intervaloCheckCampeonato = 6000;
 
 // Atualização OTA via GitHub (repo público Jaum4010/PlacarPro)
 const String GITHUB_REPO = "Jaum4010/PlacarPro";   // usuário/repositório
-const String FIRMWARE_VER = "1.1.5";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
+const String FIRMWARE_VER = "1.1.6";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
 const unsigned long INTERVALO_OTA = 24UL * 60UL * 60UL * 1000UL;  // procura nova versão a cada 24h
 HTTPUpdate httpUpdatePro;
 WiFiClientSecure otaClient;  // para HTTPS (GitHub obriga TLS)
@@ -83,7 +83,8 @@ unsigned long ultimoEnvioBateriaBg = 0;
 int pontosA = 0, pontosB = 0, quemSaca = 1, sacadorInicial = 1; 
 int setsA = 0, setsB = 0, totalSetsJogados = 0;
 bool jogoFinalizado = false, jogoIniciado = false, sorteioRealizado = false, setFechado = false;
-bool botoesInvertidos = false;   // apos TROCAR LADO, os botões físico seguem a nova posicao
+bool botoesFisicosInvertidos = false;   // config persistente (NVS): botões instalados com os lados trocados na mesa
+bool botoesInvertidos = botoesFisicosInvertidos;          // reflete botoesFisicosInvertidos; usado no loop físico (nunca é alternado por TROCAR LADO)
 bool aguardandoInicio = false;   // tela "VS" (partida chamada, ainda não iniciou o saque) 
 String nomeJogadorA = "Jogador A", nomeJogadorB = "Jogador B", msgStatus = "";
 String campeaoAtual = "";
@@ -291,7 +292,7 @@ void confirmarPartida() {
   setsA = 0; setsB = 0; totalSetsJogados = 0; setsDetalhados = "";
   historicoJogoAtual = ""; avisoAtual = ""; msgStatus = "";
   quemSaca = 1; sacadorInicial = 1;
-  botoesInvertidos = false;
+  botoesInvertidos = botoesFisicosInvertidos;
 }
 
 String escapeJson(String s) {
@@ -589,7 +590,9 @@ void carregarConfig() {
   ultimoStaIP = prefs.getString("last_sta_ip", "");
   configSenha = prefs.getString("cfg_senha", "1234");
   configIgnorada = prefs.getBool("ignorada", false);
+  botoesFisicosInvertidos = prefs.getBool("bot_inv", false);
   prefs.end();
+  botoesInvertidos = botoesFisicosInvertidos;
   computarTokenConfig();
 }
 
@@ -604,6 +607,7 @@ void salvarConfig() {
   prefs.putString("last_sta_ip", ultimoStaIP);
   prefs.putString("cfg_senha", configSenha);
   prefs.putBool("ignorada", configIgnorada);
+  prefs.putBool("bot_inv", botoesFisicosInvertidos);
   prefs.end();
 }
 
@@ -663,6 +667,8 @@ String paginaConfigHTML(const String& tok) {
   h += "<label>Senha do roteador do centro</label><input name='rot_senha' value='" + rotSenha + "'>";
   h += "<label>IP do notebook no roteador (onde roda o campeonato)</label><input name='srv_ip' value='" + srvIP + "'>";
   h += "<label>Código de acesso da configuração (deixe vazio para manter o atual)</label><input name='cfg_senha' value='' placeholder='código atual: " + configSenha + "'>";
+  h += "<label>Botões físicos do placar: marque se o botão que fica no lado do jogador A está marcando os pontos do jogador B (lados trocados na mesa)</label>";
+  h += "<div style='background:#1e1e24;border-radius:8px;padding:12px;margin:6px 0 12px;display:flex;align-items:center;gap:8px'><input type='checkbox' id='bot_inv' name='bot_inv' " + String(botoesFisicosInvertidos ? "checked" : "") + " style='width:auto;margin:0'><label for='bot_inv' style='font-size:13px;color:#fff;cursor:pointer'>INVERTER O LADO DOS BOTÕES FÍSICOS</label></div>";
   h += "<button>SALVAR E REINICIAR</button>";
   h += "</form>";
   h += "<form method='POST' action='/ignorar_camp' style='margin-top:10px'>";
@@ -909,6 +915,7 @@ void setup() {
       nomeMesa = limpo;
     }
     if (server.hasArg("cfg_senha") && server.arg("cfg_senha").length() > 0) { configSenha = server.arg("cfg_senha"); computarTokenConfig(); }
+    botoesFisicosInvertidos = server.hasArg("bot_inv");
     configIgnorada = false;
     salvarConfig();
     Serial.println("[salvar] rot=" + rotSsid + " srvIP=" + srvIP + " ultimoStaIP=" + ultimoStaIP);
@@ -954,7 +961,7 @@ void setup() {
       partidaPendenteErro = false; aguardandoConfirmacao = false; aguardandoInicio = false;
       jogoIniciado = false; sorteioRealizado = false; setFechado = false;
       quemSaca = 1; sacadorInicial = 1;
-      botoesInvertidos = false;
+      botoesInvertidos = botoesFisicosInvertidos;
       notificarCliqueFisico();
       server.send(200, "application/json", "{\"ok\":true}");
       return;
@@ -966,7 +973,7 @@ void setup() {
       partidaPendenteErro = false; setFechado = false;
       jogoIniciado = false; sorteioRealizado = false; aguardandoInicio = false; aguardandoConfirmacao = false;
       quemSaca = 1; sacadorInicial = 1;
-      botoesInvertidos = false;
+      botoesInvertidos = botoesFisicosInvertidos;
       notificarCliqueFisico();
       Serial.print("Campeao definido: "); Serial.println(campeaoAtual);
       server.send(200, "application/json", "{\"ok\":true}");
@@ -984,7 +991,7 @@ void setup() {
     pontosA = 0; pontosB = 0; setsA = 0; setsB = 0; totalSetsJogados = 0;
     setsDetalhados = ""; historicoJogoAtual = ""; avisoAtual = ""; msgStatus = "";
     partidaPendenteErro = false; setFechado = false;
-    botoesInvertidos = false;
+    botoesInvertidos = botoesFisicosInvertidos;
     jogoIniciado = true; sorteioRealizado = false; aguardandoInicio = true;
     if (server.hasArg("modo")) modoCampeonato = server.arg("modo");
     if (server.hasArg("formatoMata")) formatoMata = server.arg("formatoMata").toInt();
@@ -1112,7 +1119,7 @@ void setup() {
         setsA = 0; setsB = 0; totalSetsJogados = 0; setsDetalhados = "";
         historicoJogoAtual = ""; avisoAtual = ""; msgStatus = "";
         quemSaca = 1; sacadorInicial = 1;
-        botoesInvertidos = false;
+        botoesInvertidos = botoesFisicosInvertidos;
       }
       enviarDadosJSON(server);
       notificarCliqueFisico();
@@ -1164,7 +1171,7 @@ void setup() {
           setsA = 0; setsB = 0; totalSetsJogados = 0; setsDetalhados = "";
           historicoJogoAtual = ""; avisoAtual = ""; msgStatus = "";
           quemSaca = 1; sacadorInicial = 1;
-          botoesInvertidos = false;
+          botoesInvertidos = botoesFisicosInvertidos;
         }
       }
     }
