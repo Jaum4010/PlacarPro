@@ -2,7 +2,7 @@
 #define PLACAR_HTML_H
 
 const char paginaHTML[] PROGMEM = R"rawhtml(
-<!DOCTYPE html><html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'>
+<!DOCTYPE html><html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'><link rel='manifest' href='/manifest.json'><meta name='mobile-web-app-capable' content='yes'><meta name='apple-mobile-web-app-capable' content='yes'><meta name='theme-color' content='#1e1e24'>
 <style>
 body{font-family:sans-serif;text-align:center;background:#1e1e24;color:#fff;margin:0;padding:15px;user-select:none;-webkit-user-select:none;overflow-anchor:none;-webkit-overflow-anchor:none}html{overflow-anchor:none;-webkit-overflow-anchor:none}
 h1{color:#4CAF50}.box{background:#2a2a35;padding:20px;border-radius:15px;max-width:400px;margin:20px auto;box-shadow:0 4px 15px #000}
@@ -63,12 +63,13 @@ button{padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointe
 @keyframes rpSpin{0%,100%{transform:rotate(0deg)}55%{transform:rotate(90deg)}}
 #fsHint{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:320;display:none;align-items:center;justify-content:center;text-align:center;padding:25px;box-sizing:border-box;cursor:pointer}
 #fsHint .fs-box{background:#2a2a35;border-radius:15px;padding:25px;max-width:340px;box-shadow:0 4px 20px #000}
+#fsTap{position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:310;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:25px;box-sizing:border-box;cursor:pointer}
 </style></head><body>
 <div id='topAnchor' style='position:absolute;top:0;left:0;width:1px;height:1px'></div>
 <button id='fullscreen-btn' onclick='toggleTelaCheia()'>⛶ TELA CHEIA</button>
 <button id='somBtn' onclick='toggleSom()'>🔇 SOM</button>
 <a id='cfgBtn' href='/config_camp' style='position:fixed;top:6px;left:10px;background:rgba(255,255,255,0.12);color:#ddd;border:1px solid #555;border-radius:8px;padding:8px 12px;font-size:20px;z-index:99;width:auto;text-decoration:none;line-height:1' title='Configurações'>⚙</a>
-<h1>PLACAR DIGITAL v1.1.1</h1>
+<h1>PLACAR DIGITAL</h1>
 <div id='batBadge' style='position:fixed;top:5px;right:8px;background:rgba(0,0,0,0.5);color:#4ade80;border-radius:6px;padding:3px 8px;font-size:12px;z-index:99;display:none;transform:translateZ(0);-webkit-transform:translateZ(0);will-change:transform'></div>
 <div id='wifiBadge' style='position:fixed;top:5px;left:50%;transform:translate(-50%,0);-webkit-transform:translate(-50%,0);background:rgba(0,0,0,0.5);color:#888;border-radius:6px;padding:3px 8px;font-size:12px;z-index:99;display:none;white-space:nowrap;will-change:transform' title='Conexão com o roteador'></div>
 <div id='confModal' style='position:fixed;inset:0;background:rgba(0,0,0,0.75);display:none;z-index:200;align-items:center;justify-content:center;flex-direction:column'>
@@ -96,6 +97,7 @@ button{padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointe
 <button id='virarTelaBtn' onclick='virarTela()'>↻ VIRAR TELA</button>
 <div id='rotatePrompt'><div class='rp-ico'>📱</div><div class='rp-txt'>Gire o celular de lado para o modo paisagem</div></div>
 <div id='fsHint' onclick='document.getElementById("fsHint").style.display="none"'><div class='fs-box'><div style='font-size:40px'>📲</div><div style='font-size:15px;color:#fff;line-height:1.7;margin-top:10px'>No <b>iPhone</b> a tela cheia é feita pelo próprio celular:<br><br>1️⃣ Toque em <b>Compartilhar</b> ⬆️<br>2️⃣ <b>Adicionar à Tela de Início</b><br>3️⃣ Abra pelo ícone (fica sem a barra de endereço)</div><button style='background:#4CAF50;color:#fff;width:auto;padding:10px 30px'>ENTENDI</button></div></div>
+<div id='fsTap' onclick='ativarVisual()'><div style='font-size:44px'>📲↻</div><div style='font-size:17px;color:#fff;font-weight:bold;line-height:1.6;margin-top:12px;background:rgba(255,255,255,0.08);padding:16px 22px;border-radius:14px'>Toque para ativar<br>TELA CHEIA + PAISAGEM</div><div style='font-size:12px;color:#9aa5b1;margin-top:14px;max-width:300px;line-height:1.5'>💡 Para abrir sempre em paisagem (tripé), instale como app:<br>menu ⋮ do navegador → “Adicionar à tela inicial”</div></div>
 <div id='tCamp' style='position:fixed;inset:0;background:radial-gradient(circle at 50% 28%,#3a2a00,#0d0d10);z-index:150;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center'>
   <div style='font-size:16vh;line-height:1' ontimeout=''>🏆</div>
   <div style='color:#ffcc00;font-size:7vh;font-weight:900;letter-spacing:2px;margin-top:2vh'>CAMPEÃO</div>
@@ -106,7 +108,7 @@ button{padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointe
 <script>
 if(history&&history.scrollRestoration){history.scrollRestoration='manual'}
 var isSetF=false, fin=false, autoNextTimer=null, autoFinalTimer=null, wakeLock=null, wakeAudioCtx=null, wakeInterval=null, wakePing=null, wakeVideo=null, wakeOsc=null, wakeGain=null, flipped=false, somAtivo=false, antigoPA=-1, antigoPB=-1, ultimoH='', emJogando=false;
-var VERSAO_PAGINA=23, checadoVersao=false;
+var VERSAO_PAGINA=27, checadoVersao=false;
 
 var rolarAte=0;
 function rolarScroll(){function s(){try{var x=document.getElementById('topAnchor');if(x&&x.scrollIntoView)x.scrollIntoView()}catch(e){}window.scrollTo(0,0);try{window.scrollTo({top:0,left:0,behavior:'auto'})}catch(e){}if(document.body)document.body.scrollTop=0;if(document.documentElement)document.documentElement.scrollTop=0}s();s();setTimeout(s,40);setTimeout(s,120)}
@@ -143,7 +145,7 @@ function desenharTela(d) {
     id('setA').innerText=d.sA;id('setB').innerText=d.sB;
     if(document.documentElement.requestFullscreen){document.documentElement.requestFullscreen().catch(function(){})}
     if(screen.orientation&&screen.orientation.lock){screen.orientation.lock('landscape').catch(function(){})}
-    if(!emJogando||(+d.pA===0&&+d.pB===0)){emJogando=true;rolarTopo()}
+    if(!emJogando||(+d.pA===0&&+d.pB===0)){emJogando=true;ativarTelaAtiva();rolarTopo()}
     if(antigoPA>=0&&antigoPB>=0){
       if(d.pA>antigoPA||d.pB>antigoPB){tocarSom(880,0.15)}
       else if(d.pA<antigoPA||d.pB<antigoPB){tocarSom(660,0.25)}
@@ -171,6 +173,7 @@ function desenharTela(d) {
     var pp=document.getElementById('rotatePrompt');if(pp)pp.style.display='none';
   }
   atualizarRotacao();
+  checarVisual();
   reafirmarTopo();
 }
 
@@ -301,6 +304,23 @@ function toggleTelaCheia() {
     else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
   }
 }
+function ativarVisual(){
+  var f=document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen;
+  var d=document.documentElement;
+  var terminar=function(){
+    document.getElementById('fsTap').style.display='none';
+    setTimeout(function(){
+      if(screen.orientation&&screen.orientation.lock){screen.orientation.lock('landscape').catch(function(){})}
+    },300);
+  };
+  if(f){
+    var p=f.call(d);
+    if(p&&p.then)p.then(terminar).catch(function(){terminar()});
+    else terminar();
+  }else{
+    terminar();
+  }
+}
 function atualizarRotacao(){
   var p=document.getElementById('rotatePrompt');
   if(!p)return;
@@ -309,6 +329,23 @@ function atualizarRotacao(){
   var retrato=window.matchMedia&&window.matchMedia('(orientation:portrait)').matches;
   p.style.display=(jg&&retrato&&!suportaLock)?'flex':'none';
 }
+function checarVisual(){
+  var jg=(document.body.classList.contains('jogando')||document.getElementById('tCamp').style.display==='flex')&&true;
+  var ativo=document.fullscreenElement||document.webkitFullscreenElement;
+  var retrato=window.matchMedia&&window.matchMedia('(orientation:portrait)').matches;
+  var appAberto=(window.matchMedia&&(window.matchMedia('(display-mode: fullscreen)').matches||window.matchMedia('(display-mode: standalone)').matches));
+  var tap=document.getElementById('fsTap');
+  if(!tap)return;
+  // Em modo app (instalado na tela inicial) já está em tela cheia: nunca pede toque.
+  if(appAberto){if(tap.__mostrado){tap.__mostrado=false;tap.style.display='none'}return}
+  // Aba normal: só pede toque quando o celular está em pé (retrato) e sem tela cheia.
+  // Se o celular já está deitado (paisagem) no tripé, não mostra nada — já está correto.
+  if(jg&&retrato&&!ativo&&!document.getElementById('fsHint').style.display==='flex'){
+    if(!tap.__mostrado){tap.__mostrado=true;tap.style.display='flex'}
+  }else if(tap.__mostrado){tap.__mostrado=false;tap.style.display='none'}
+}
+document.addEventListener('fullscreenchange',function(){setTimeout(checarVisual,300)});
+document.addEventListener('webkitfullscreenchange',function(){setTimeout(checarVisual,300)});
 window.addEventListener('orientationchange',function(){setTimeout(atualizarRotacao,300)});
 window.addEventListener('resize',function(){setTimeout(atualizarRotacao,300)});
 function tocarVsSom(){

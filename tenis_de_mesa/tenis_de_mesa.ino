@@ -51,7 +51,7 @@ const unsigned long intervaloCheckCampeonato = 6000;
 
 // Atualização OTA via GitHub (repo público Jaum4010/PlacarPro)
 const String GITHUB_REPO = "Jaum4010/PlacarPro";   // usuário/repositório
-const String FIRMWARE_VER = "1.1.4";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
+const String FIRMWARE_VER = "1.1.5";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
 const unsigned long INTERVALO_OTA = 24UL * 60UL * 60UL * 1000UL;  // procura nova versão a cada 24h
 HTTPUpdate httpUpdatePro;
 WiFiClientSecure otaClient;  // para HTTPS (GitHub obriga TLS)
@@ -88,7 +88,7 @@ bool aguardandoInicio = false;   // tela "VS" (partida chamada, ainda não inici
 String nomeJogadorA = "Jogador A", nomeJogadorB = "Jogador B", msgStatus = "";
 String campeaoAtual = "";
 String avisoAtual = "";
-const int VERSAO_PAGINA = 23;   // incrementar a cada mudanca no JS servido (placar_html.h)
+const int VERSAO_PAGINA = 27;   // incrementar a cada mudanca no JS servido (placar_html.h)
 String historicoArquivo = "";
 String historicoJogoAtual = "";
 String setsDetalhados = "";
@@ -526,7 +526,7 @@ bool partidaFinalizada() {
   int sa = setsA, sb = setsB;
   if (setFechado) { if (pontosA > pontosB) sa++; else sb++; }
   if (sa == sb) return false;
-  if (!campeonatoDetectado) return true;
+  if (!campeonatoDetectado) return false; // avulso: sem limite de sets, continua até clicar NOVO JOGO
   int fmt = (formatoAtual > 0) ? formatoAtual : ((modoCampeonato == "chave") ? formatoMata : formatoGrupos);
   if (fmt <= 0) return true;
   return max(sa, sb) >= (fmt + 1) / 2;
@@ -730,7 +730,9 @@ void trocarLado() {
   }
   quemSaca = (quemSaca == 1) ? 2 : 1;
   sacadorInicial = (sacadorInicial == 1) ? 2 : 1;
-  botoesInvertidos = !botoesInvertidos;
+  // Nao invertemos botoesInvertidos aqui: nomes/pontos/sets ja trocam de coluna
+  // acima, entao o botao fisico A continua marcando a coluna A (quem esta nela).
+  // Inverter junto (dupla inversao) faria o ponto ir para o outro jogador.
 }
 
 void notificarCliqueFisico() {
@@ -855,6 +857,11 @@ void setup() {
   server.on("/hotspot-detect.html", servirCaptiva);
   server.on("/success.txt", servirCaptiva);
   server.on("/ncsi.txt", servirCaptiva);
+  server.on("/manifest.json", []() {
+    server.sendHeader("Cache-Control", "no-cache");
+    server.send(200, "application/manifest+json",
+      "{\"name\":\"PLACAR TÉNIS DE MESA\",\"short_name\":\"PLACAR\",\"start_url\":\"/\",\"display\":\"fullscreen\",\"orientation\":\"landscape\",\"background_color\":\"#1e1e24\",\"theme_color\":\"#1e1e24\"}");
+  });
   server.on("/connecttest.txt", servirCaptiva);
   server.on("/login_camp", HTTP_POST, [&]() {
     String s = server.hasArg("senha") ? server.arg("senha") : "";
