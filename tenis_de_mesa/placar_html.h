@@ -68,7 +68,7 @@ button{padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointe
 <button id='fullscreen-btn' onclick='toggleTelaCheia()'>⛶ TELA CHEIA</button>
 <button id='somBtn' onclick='toggleSom()'>🔇 SOM</button>
 <a id='cfgBtn' href='/config_camp' style='position:fixed;top:6px;left:10px;background:rgba(255,255,255,0.12);color:#ddd;border:1px solid #555;border-radius:8px;padding:8px 12px;font-size:20px;z-index:99;width:auto;text-decoration:none;line-height:1' title='Configurações'>⚙</a>
-<h1>PLACAR DIGITAL v1.1.0</h1>
+<h1>PLACAR DIGITAL v1.1.1</h1>
 <div id='batBadge' style='position:fixed;top:5px;right:8px;background:rgba(0,0,0,0.5);color:#4ade80;border-radius:6px;padding:3px 8px;font-size:12px;z-index:99;display:none;transform:translateZ(0);-webkit-transform:translateZ(0);will-change:transform'></div>
 <div id='wifiBadge' style='position:fixed;top:5px;left:50%;transform:translate(-50%,0);-webkit-transform:translate(-50%,0);background:rgba(0,0,0,0.5);color:#888;border-radius:6px;padding:3px 8px;font-size:12px;z-index:99;display:none;white-space:nowrap;will-change:transform' title='Conexão com o roteador'></div>
 <div id='confModal' style='position:fixed;inset:0;background:rgba(0,0,0,0.75);display:none;z-index:200;align-items:center;justify-content:center;flex-direction:column'>
