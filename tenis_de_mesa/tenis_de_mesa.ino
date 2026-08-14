@@ -51,7 +51,7 @@ const unsigned long intervaloCheckCampeonato = 6000;
 
 // Atualização OTA via GitHub (repo público Jaum4010/PlacarPro)
 const String GITHUB_REPO = "Jaum4010/PlacarPro";   // usuário/repositório
-const String FIRMWARE_VER = "1.1.1";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
+const String FIRMWARE_VER = "1.1.2";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
 const unsigned long INTERVALO_OTA = 24UL * 60UL * 60UL * 1000UL;  // procura nova versão a cada 24h
 HTTPUpdate httpUpdatePro;
 WiFiClientSecure otaClient;  // para HTTPS (GitHub obriga TLS)
@@ -62,6 +62,9 @@ const unsigned long ATRASO_INICIAL_OTA = 5UL * 60UL * 1000UL;  // primeiro check
 volatile bool otaEmAndamento = false;
 String otaStatus = "idle";   // idle | verificando | baixando | atualizado | erro: <motivo>
 volatile int otaProgresso = -1;  // -1 = sem progresso; 0..100 durante o download
+const unsigned long RETRY_OTA = 10UL * 60UL * 1000UL;  // se falhar sem rede, tenta de novo a cada 10min (nao espera 24h)
+bool otaCheckFeito = false;   // true quando uma checagem realmente alcancou o GitHub
+bool otaAlcancouGithub = false;
 
 const int pinoBotaoA = 18; 
 const int pinoBotaoB = 19; 
@@ -396,6 +399,7 @@ bool verificarVersaoGithub(String& tagNova) {
   int codigo = http.GET();
   String corpo = http.getString();
   http.end();
+  otaAlcancouGithub = true;   // chegou a responder (mesmo que HTTP != 200): rede OK
   if (codigo != 200) {
     Serial.print("[OTA] github HTTP "); Serial.println(codigo);
     return false;
@@ -442,10 +446,11 @@ void tarefaOta(void* param) {
   String tag;
   otaStatus = "verificando";
   if (!verificarVersaoGithub(tag)) {
-    otaStatus = "atualizado";   // já está na última versão (ou sem rede/disponibilidade)
+    otaStatus = otaAlcancouGithub ? "atualizado" : "erro: sem rede";
   } else {
     baixarEAtualizar(tag);
   }
+  otaCheckFeito = otaAlcancouGithub;
   otaEmAndamento = false;
   vTaskDelete(NULL);
 }
@@ -1239,7 +1244,9 @@ void setup() {
 void loop() {
   verificarCampeonato();
   if (millis() >= ATRASO_INICIAL_OTA
-      && (ultimoCheckOTA == 0 || millis() - ultimoCheckOTA >= INTERVALO_OTA)) {
+      && !otaEmAndamento
+      && (ultimoCheckOTA == 0
+          || millis() - ultimoCheckOTA >= (otaCheckFeito ? INTERVALO_OTA : RETRY_OTA))) {
     ultimoCheckOTA = millis();
     iniciarOtaBackground();
   }
