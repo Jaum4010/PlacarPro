@@ -51,7 +51,7 @@ const unsigned long intervaloCheckCampeonato = 6000;
 
 // Atualização OTA via GitHub (repo público Jaum4010/PlacarPro)
 const String GITHUB_REPO = "Jaum4010/PlacarPro";   // usuário/repositório
-const String FIRMWARE_VER = "1.1.3";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
+const String FIRMWARE_VER = "1.1.4";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
 const unsigned long INTERVALO_OTA = 24UL * 60UL * 60UL * 1000UL;  // procura nova versão a cada 24h
 HTTPUpdate httpUpdatePro;
 WiFiClientSecure otaClient;  // para HTTPS (GitHub obriga TLS)
@@ -76,7 +76,9 @@ int percentualBateria = -1;
 unsigned long ultimoLeituraBateria = 0;
 const unsigned long intervaloLeituraBateria = 5000;
 unsigned long ultimoEnvioBateria = 0;
-const unsigned long intervaloEnvioBateria = 30000; 
+const unsigned long intervaloEnvioBateria = 30000;
+volatile bool envioBateriaEmAndamento = false;
+unsigned long ultimoEnvioBateriaBg = 0;
 
 int pontosA = 0, pontosB = 0, quemSaca = 1, sacadorInicial = 1; 
 int setsA = 0, setsB = 0, totalSetsJogados = 0;
@@ -340,6 +342,12 @@ void enviarBateria() {
   Serial.print(percentualBateria);
   Serial.print("%  HTTP ");
   Serial.println(codigo);
+}
+
+void tarefaEnvioBateria(void* param) {
+  enviarBateria();
+  envioBateriaEmAndamento = false;
+  vTaskDelete(NULL);
 }
 
 String extrairCampoJSON(const String& js, const char* campo) {
@@ -742,7 +750,6 @@ void notificarCliqueFisico() {
       sseClients[i].print("data: ");
       sseClients[i].println(j);
       sseClients[i].println();
-      sseClients[i].flush();   // envia na hora, sem esperar o heartbeat
     }
   }
 }
@@ -1256,15 +1263,16 @@ void loop() {
     ultimoCheckOTA = millis();
     iniciarOtaBackground();
   }
+  if (millis() - ultimoEnvioBateriaBg > intervaloEnvioBateria && !envioBateriaEmAndamento) {
+    ultimoEnvioBateriaBg = millis();
+    envioBateriaEmAndamento = true;
+    xTaskCreatePinnedToCore(tarefaEnvioBateria, "batTask", 8192, NULL, 1, NULL, 0);
+  }
   procurarServidor();
   manterStaConectado();
   if (millis() - ultimoLeituraBateria > intervaloLeituraBateria) {
     ultimoLeituraBateria = millis();
     lerBateria();
-  }
-  if (WiFi.status() == WL_CONNECTED && millis() - ultimoEnvioBateria > intervaloEnvioBateria) {
-    ultimoEnvioBateria = millis();
-    enviarBateria();
   }
   dnsServer.processNextRequest();
   server.handleClient();
