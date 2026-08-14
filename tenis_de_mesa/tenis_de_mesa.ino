@@ -12,6 +12,9 @@
 #include <arpa/inet.h>
 #include <WiFiClientSecure.h>
 #include <HTTPUpdate.h>
+#include <esp_ota_ops.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 // Configuração persistente (NVS) — configurada UMA vez por centro pela tela
 // de configuração (abre sozinha na primeira vez). NÃO precisa recompilar.
@@ -48,12 +51,17 @@ const unsigned long intervaloCheckCampeonato = 6000;
 
 // Atualização OTA via GitHub (repo público Jaum4010/PlacarPro)
 const String GITHUB_REPO = "Jaum4010/PlacarPro";   // usuário/repositório
-const String FIRMWARE_VER = "1.0.3";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
+const String FIRMWARE_VER = "1.1.0";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
 const unsigned long INTERVALO_OTA = 24UL * 60UL * 60UL * 1000UL;  // procura nova versão a cada 24h
 HTTPUpdate httpUpdatePro;
 WiFiClientSecure otaClient;  // para HTTPS (GitHub obriga TLS)
 unsigned long ultimoCheckOTA = 0;  // 0 => ainda nao checou
 const unsigned long ATRASO_INICIAL_OTA = 5UL * 60UL * 1000UL;  // primeiro check 5min apos o boot
+
+// OTA em segundo plano (task no core 0): o loop continua servindo a mesa enquanto baixa.
+volatile bool otaEmAndamento = false;
+String otaStatus = "idle";   // idle | verificando | baixando | atualizado | erro: <motivo>
+volatile int otaProgresso = -1;  // -1 = sem progresso; 0..100 durante o download
 
 const int pinoBotaoA = 18; 
 const int pinoBotaoB = 19; 
@@ -75,7 +83,7 @@ bool aguardandoInicio = false;   // tela "VS" (partida chamada, ainda não inici
 String nomeJogadorA = "Jogador A", nomeJogadorB = "Jogador B", msgStatus = "";
 String campeaoAtual = "";
 String avisoAtual = "";
-const int VERSAO_PAGINA = 21;   // incrementar a cada mudanca no JS servido (placar_html.h)
+const int VERSAO_PAGINA = 22;   // incrementar a cada mudanca no JS servido (placar_html.h)
 String historicoArquivo = "";
 String historicoJogoAtual = "";
 String setsDetalhados = "";
@@ -167,6 +175,7 @@ void enviarDadosJSON(WebServer &srv) {
   j += ",\"cmp\":" + String(campeonatoDetectado ? "true" : "false") + "";
   j += ",\"fin\":" + String(partidaFinalizada() ? "true" : "false");
   j += ",\"ver\":" + String(VERSAO_PAGINA);
+  j += ",\"ota\":\"" + otaStatus + "\",\"otap\":" + String(otaProgresso);
   j += "}";
   srv.send(200, "application/json", j);
 }
@@ -400,6 +409,15 @@ bool verificarVersaoGithub(String& tagNova) {
 }
 
 bool baixarEAtualizar(const String& tag) {
+  if (ESP.getFreeHeap() < 60 * 1024) {
+    Serial.print("[OTA] heap insuficiente p/ baixar: "); Serial.println((int)ESP.getFreeHeap());
+    otaStatus = "erro: heap baixo";
+    return false;
+  }
+  httpUpdatePro.onProgress([](int cur, int total) {
+    if (total > 0) { otaProgresso = cur * 100 / total; }
+    delay(1);  // cede a CPU p/ as tarefas de WiFi/TCP não morrerem de fome
+  });
   String url = String("https://github.com/") + GITHUB_REPO + "/releases/download/" + tag + "/firmware.bin";
   Serial.print("[OTA] baixando "); Serial.println(url);
   otaClient.setInsecure();
@@ -409,11 +427,37 @@ bool baixarEAtualizar(const String& tag) {
   t_httpUpdate_return ret = httpUpdatePro.update(otaClient, url);
   if (ret == HTTP_UPDATE_OK) {
     Serial.println("[OTA] gravado com sucesso. Reiniciando...");
+    otaStatus = "atualizado";
+    otaProgresso = 100;
     ESP.restart();
     return true;
   }
   Serial.print("[OTA] falhou: "); Serial.println((int)ret);
+  otaStatus = "erro: codigo " + String((int)ret);
+  otaProgresso = -1;
   return false;
+}
+
+void tarefaOta(void* param) {
+  String tag;
+  otaStatus = "verificando";
+  if (!verificarVersaoGithub(tag)) {
+    otaStatus = "atualizado";   // já está na última versão (ou sem rede/disponibilidade)
+  } else {
+    baixarEAtualizar(tag);
+  }
+  otaEmAndamento = false;
+  vTaskDelete(NULL);
+}
+
+void iniciarOtaBackground() {
+  // Segurança: nunca sobrepor duas tarefas de OTA e não baixar no meio de uma partida.
+  if (otaEmAndamento) return;
+  if (!mesaLivreOta()) return;
+  if (WiFi.status() != WL_CONNECTED) { otaStatus = "erro: sem rede"; return; }
+  otaEmAndamento = true;
+  otaProgresso = -1;
+  xTaskCreatePinnedToCore(tarefaOta, "otaTask", 8192, NULL, 1, NULL, 0);
 }
 
 void enviarBroadcastDescoberta() {
@@ -687,7 +731,7 @@ void notificarCliqueFisico() {
   j += "\"msg\":\"" + msgStatus + "\",\"aviso\":\"" + avisoAtual + "\",\"pend\":" + String(partidaPendenteErro ? "true" : "false") + ",\"h\":\"" + historicoCompleto() + "\",\"ncl\":" + String(contarClientes()) + ",\"b\":" + String(percentualBateria) + ",\"btv\":" + String(tensaoBateria, 2) + ",\"sta\":" + String(WiFi.status() == WL_CONNECTED ? "true" : "false") + ",\"staIP\":\"" + (WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : "") + "\"";
   j += ",\"camp\":\"" + escapeJson(campeaoAtual) + "\"";
   j += ",\"fin\":" + String(partidaFinalizada() ? "true" : "false");
-  j += ",\"ver\":" + String(VERSAO_PAGINA) + "}";
+  j += ",\"ver\":" + String(VERSAO_PAGINA) + ",\"ota\":\"" + otaStatus + "\",\"otap\":" + String(otaProgresso) + "}";
   for (int i = 0; i < MAX_SSE; i++) {
     if (clienteAtivo(i)) {
       sseClients[i].print("data: ");
@@ -739,6 +783,14 @@ void manterStaConectado() {
 
 void setup() {
   Serial.begin(115200);
+  // Se esta versão foi instalada via OTA e o boot completo der certo, cancela o
+  // contador de rollback do bootloader: daqui pra frente ela é a versão estável.
+  // Se esta versão travar no boot antes daqui, o Bootloader volta p/ a anterior.
+  if (esp_ota_mark_app_valid_cancel_rollback() == ESP_OK) {
+    Serial.println("[boot] firmware atual validado (rollback seguro ativo)");
+  } else {
+    Serial.println("[boot] aviso: rollback nao suportado pelo build (sem marca de validacao)");
+  }
   setCpuFrequencyMhz(80);
   btStop();
   pinMode(pinoBotaoA, INPUT_PULLUP);
@@ -1186,11 +1238,10 @@ void setup() {
 
 void loop() {
   verificarCampeonato();
-  if (mesaLivreOta() && millis() >= ATRASO_INICIAL_OTA
+  if (millis() >= ATRASO_INICIAL_OTA
       && (ultimoCheckOTA == 0 || millis() - ultimoCheckOTA >= INTERVALO_OTA)) {
     ultimoCheckOTA = millis();
-    String tag;
-    if (verificarVersaoGithub(tag)) baixarEAtualizar(tag);
+    iniciarOtaBackground();
   }
   procurarServidor();
   manterStaConectado();
