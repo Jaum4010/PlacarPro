@@ -106,7 +106,7 @@ button{padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointe
 <script>
 if(history&&history.scrollRestoration){history.scrollRestoration='manual'}
 var isSetF=false, fin=false, autoNextTimer=null, autoFinalTimer=null, wakeLock=null, wakeAudioCtx=null, wakeInterval=null, wakePing=null, wakeVideo=null, wakeOsc=null, wakeGain=null, flipped=false, somAtivo=false, antigoPA=-1, antigoPB=-1, ultimoH='', emJogando=false;
-var VERSAO_PAGINA=22, checadoVersao=false;
+var VERSAO_PAGINA=23, checadoVersao=false;
 
 var rolarAte=0;
 function rolarScroll(){function s(){try{var x=document.getElementById('topAnchor');if(x&&x.scrollIntoView)x.scrollIntoView()}catch(e){}window.scrollTo(0,0);try{window.scrollTo({top:0,left:0,behavior:'auto'})}catch(e){}if(document.body)document.body.scrollTop=0;if(document.documentElement)document.documentElement.scrollTop=0}s();s();setTimeout(s,40);setTimeout(s,120)}
@@ -141,6 +141,8 @@ function desenharTela(d) {
   if(!d.ini){emJogando=false;cancelarAutoFinal();cancelarAutoNext();show('t1','t2','t3');document.body.classList.remove('jogando');id('instrucao').style.display='block';antigoPA=-1;antigoPB=-1;rolarTopo()}else if(d.alg&&!d.srt){emJogando=false;cancelarAutoFinal();cancelarAutoNext();show('t0','t1','t2');id('t3').style.display='none';document.body.classList.remove('jogando');id('instrucao').style.display='none';id('tVsA').innerText=d.nA;id('tVsB').innerText=d.nB;antigoPA=-1;antigoPB=-1;tocarVsSom();rolarTopo()}else if(!d.srt){emJogando=false;cancelarAutoFinal();cancelarAutoNext();show('t2','t1','t3');document.body.classList.remove('jogando');id('instrucao').style.display='none';id('sA').innerText=d.nA;id('sB').innerText=d.nB;antigoPA=-1;antigoPB=-1;rolarTopo()}else{show('t3','t1','t2');document.body.classList.add('jogando');id('instrucao').style.display='none';
     id('lA').innerText=d.nA;id('lB').innerText=d.nB;id('pA').innerText=d.pA;id('pB').innerText=d.pB;
     id('setA').innerText=d.sA;id('setB').innerText=d.sB;
+    if(document.documentElement.requestFullscreen){document.documentElement.requestFullscreen().catch(function(){})}
+    if(screen.orientation&&screen.orientation.lock){screen.orientation.lock('landscape').catch(function(){})}
     if(!emJogando||(+d.pA===0&&+d.pB===0)){emJogando=true;rolarTopo()}
     if(antigoPA>=0&&antigoPB>=0){
       if(d.pA>antigoPA||d.pB>antigoPB){tocarSom(880,0.15)}
@@ -423,6 +425,32 @@ function toggleSom(){
   }
 }
 </script></body></html>
+)rawhtml";
+
+// Página do portal cativo: o Android/Motorola frequentemente abre o captivo num
+// navegador leve (não-Chrome) sem tela cheia/rotação. Aqui oferecemos abrir no Chrome.
+const char paginaCaptivaHTML[] PROGMEM = R"rawhtml(
+<!DOCTYPE html><html lang="pt"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>PLACAR</title>
+<style>
+html,body{margin:0;padding:0;background:#0b0f1a;color:#fff;font-family:Arial,Helvetica,sans-serif;height:100%}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;box-sizing:border-box}
+h1{font-size:34px;margin:0 0 8px}
+p{color:#9aa5b1;font-size:15px;margin:8px 0 26px;line-height:1.5}
+a.btn{display:block;width:100%;max-width:340px;padding:18px;margin:10px auto;border-radius:14px;text-decoration:none;font-size:18px;font-weight:800;text-align:center;box-sizing:border-box}
+.chrome{background:#1a73e8;color:#fff}
+.web{background:#22c55e;color:#052e16}
+.hint{font-size:13px;color:#7d8894;margin-top:18px}
+</style>
+</head><body>
+<h1>TÊNIS DE MESA</h1>
+<p>Para o placar funcionar em tela cheia e paisagem automática, abra no Google Chrome.</p>
+<a class="btn chrome" href="intent://192.168.4.1/#Intent;scheme=http;package=com.android.chrome;S.browser_fallback_url=http%3A%2F%2F192.168.4.1%2F;end">ABRIR NO CHROME</a>
+<a class="btn web" href="http://192.168.4.1/">ABRIR AQUI MESMO</a>
+<p class="hint">Não abriu no Chrome? Toque nas reticências do navegador, escolha "Abrir no Chrome" ou abra http://192.168.4.1 manualmente.</p>
+</body></html>
 )rawhtml";
 
 #endif
