@@ -51,7 +51,7 @@ const unsigned long intervaloCheckCampeonato = 6000;
 
 // Atualização OTA via GitHub (repo público Jaum4010/PlacarPro)
 const String GITHUB_REPO = "Jaum4010/PlacarPro";   // usuário/repositório
-const String FIRMWARE_VER = "1.1.6";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
+const String FIRMWARE_VER = "1.1.7";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
 const unsigned long INTERVALO_OTA = 24UL * 60UL * 60UL * 1000UL;  // procura nova versão a cada 24h
 HTTPUpdate httpUpdatePro;
 WiFiClientSecure otaClient;  // para HTTPS (GitHub obriga TLS)
@@ -89,7 +89,7 @@ bool aguardandoInicio = false;   // tela "VS" (partida chamada, ainda não inici
 String nomeJogadorA = "Jogador A", nomeJogadorB = "Jogador B", msgStatus = "";
 String campeaoAtual = "";
 String avisoAtual = "";
-const int VERSAO_PAGINA = 27;   // incrementar a cada mudanca no JS servido (placar_html.h)
+const int VERSAO_PAGINA = 28;   // incrementar a cada mudanca no JS servido (placar_html.h)
 String historicoArquivo = "";
 String historicoJogoAtual = "";
 String setsDetalhados = "";
@@ -236,15 +236,15 @@ void finalizarJogoAtual() {
     bloco += "PARTIDA EMPATADA " + String(setsA) + " x " + String(setsB);
   }
   bloco += "<br>" + historicoJogoAtual;
-  if (historicoArquivo != "") historicoArquivo += "<br><br>";
-  historicoArquivo += bloco;
+  if (historicoArquivo != "") bloco += "<br><br>";
+  historicoArquivo = bloco + historicoArquivo;
   historicoJogoAtual = "";
 }
 
 String historicoCompleto() {
   if (historicoJogoAtual == "") return historicoArquivo;
   if (historicoArquivo == "") return historicoJogoAtual;
-  return historicoArquivo + "<br><br>" + historicoJogoAtual;
+  return historicoJogoAtual + "<br><br>" + historicoArquivo;
 }
 
 // Fila de resultados finalizados (o notebook puxa, em vez de depender do POST)
