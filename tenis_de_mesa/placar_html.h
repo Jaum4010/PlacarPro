@@ -16,12 +16,12 @@ button{padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointe
 .sacando{border:2px solid #ffcc00}.pts{font-size:65px;font-weight:bold;margin:2px 0;line-height:1}
 .sets-count{font-size:14px;color:#ffcc00;margin-top:2px;font-weight:bold}
 .btn-m{background:#2e7d32;color:#fff}.btn-less{background:#555;color:#fff;width:80%}
-.status{position:fixed;top:35%;left:50%;transform:translate(-50%,-50%);-webkit-transform:translate(-50%,-50%);background:rgba(30,90,40,0.95);border:2px solid #4CAF50;padding:14px 22px;border-radius:12px;font-weight:bold;display:none;z-index:60;text-align:center;font-size:3.5vh;max-width:90vw;box-sizing:border-box;box-shadow:0 4px 18px rgba(0,0,0,0.5)}
+.status{position:fixed;top:6%;left:50%;transform:translate(-50%,-50%);-webkit-transform:translate(-50%,-50%);background:rgba(30,90,40,0.95);border:2px solid #4CAF50;padding:14px 22px;border-radius:12px;font-weight:bold;display:none;z-index:60;text-align:center;font-size:3.5vh;max-width:90vw;box-sizing:border-box;box-shadow:0 4px 18px rgba(0,0,0,0.5)}
 #fullscreen-btn{position:fixed;top:5px;right:5px;background:rgba(255,255,255,0.1);color:#fff;border:1px solid #555;border-radius:5px;padding:4px 8px;font-size:11px;cursor:pointer;z-index:99;width:auto}
 #somBtn{position:fixed;bottom:10px;left:10px;background:rgba(255,255,255,0.1);color:#888;border:1px solid #555;border-radius:8px;padding:8px 12px;font-size:14px;cursor:pointer;z-index:99;width:auto}
 #somBtn.ativo{color:#4CAF50;border-color:#4CAF50}
 #trocarLadoBtn{position:fixed;bottom:10px;right:10px;background:#1565c0;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:bold;cursor:pointer;z-index:99;width:auto;box-shadow:0 2px 8px rgba(0,0,0,0.4)}
-#autoNextMsg{position:fixed;top:35%;left:50%;transform:translate(-50%,-50%);-webkit-transform:translate(-50%,-50%);display:none;background:rgba(60,45,0,0.95);color:#ffcc00;border:2px solid #ffcc00;padding:14px 22px;border-radius:12px;font-weight:bold;font-size:3.5vh;text-align:center;z-index:65;max-width:90vw;box-sizing:border-box;box-shadow:0 4px 18px rgba(0,0,0,0.5)}
+#autoNextMsg{position:fixed;top:18%;left:50%;transform:translate(-50%,-50%);-webkit-transform:translate(-50%,-50%);display:none;background:rgba(60,45,0,0.95);color:#ffcc00;border:2px solid #ffcc00;padding:14px 22px;border-radius:12px;font-weight:bold;font-size:3.5vh;text-align:center;z-index:65;max-width:90vw;box-sizing:border-box;box-shadow:0 4px 18px rgba(0,0,0,0.5)}
 ._awake-indicator{position:fixed;top:-100px;left:0;width:2px;height:2px;opacity:0;pointer-events:none;animation:_w 0.05s infinite;will-change:transform}@keyframes _w{from{transform:translateX(0)}to{transform:translateX(10px)}}
 .set-box{background:#ffcc00;color:#000;border-radius:6px;font-weight:bold;display:flex;align-items:center;justify-content:center;width:6%;font-size:2.5vw}
 @media(orientation:landscape){
@@ -108,7 +108,7 @@ button{padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointe
 <script>
 if(history&&history.scrollRestoration){history.scrollRestoration='manual'}
 var isSetF=false, fin=false, autoNextTimer=null, autoFinalTimer=null, wakeLock=null, wakeAudioCtx=null, wakeInterval=null, wakePing=null, wakeVideo=null, wakeOsc=null, wakeGain=null, flipped=false, somAtivo=false, antigoPA=-1, antigoPB=-1, ultimoH='', emJogando=false;
-var VERSAO_PAGINA=28, checadoVersao=false;
+var VERSAO_PAGINA=29, checadoVersao=false;
 
 var rolarAte=0;
 function rolarScroll(){function s(){try{var x=document.getElementById('topAnchor');if(x&&x.scrollIntoView)x.scrollIntoView()}catch(e){}window.scrollTo(0,0);try{window.scrollTo({top:0,left:0,behavior:'auto'})}catch(e){}if(document.body)document.body.scrollTop=0;if(document.documentElement)document.documentElement.scrollTop=0}s();s();setTimeout(s,40);setTimeout(s,120)}
