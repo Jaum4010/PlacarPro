@@ -108,7 +108,7 @@ button{padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointe
 <script>
 if(history&&history.scrollRestoration){history.scrollRestoration='manual'}
 var isSetF=false, fin=false, autoNextTimer=null, autoFinalTimer=null, wakeLock=null, wakeAudioCtx=null, wakeInterval=null, wakePing=null, wakeVideo=null, wakeOsc=null, wakeGain=null, flipped=false, somAtivo=false, antigoPA=-1, antigoPB=-1, ultimoH='', emJogando=false;
-var VERSAO_PAGINA=29, checadoVersao=false;
+var VERSAO_PAGINA=30, checadoVersao=false;
 
 var rolarAte=0;
 function rolarScroll(){function s(){try{var x=document.getElementById('topAnchor');if(x&&x.scrollIntoView)x.scrollIntoView()}catch(e){}window.scrollTo(0,0);try{window.scrollTo({top:0,left:0,behavior:'auto'})}catch(e){}if(document.body)document.body.scrollTop=0;if(document.documentElement)document.documentElement.scrollTop=0}s();s();setTimeout(s,40);setTimeout(s,120)}
@@ -348,6 +348,29 @@ document.addEventListener('fullscreenchange',function(){setTimeout(checarVisual,
 document.addEventListener('webkitfullscreenchange',function(){setTimeout(checarVisual,300)});
 window.addEventListener('orientationchange',function(){setTimeout(atualizarRotacao,300)});
 window.addEventListener('resize',function(){setTimeout(atualizarRotacao,300)});
+// 2a tela em paisagem: o celular 2 nao faz o gesto de iniciar partida, e o
+// navegador so permite requestFullscreen()/orientation.lock() dentro de um
+// gesto do usuario. Capturamos o PRIMEIRO touch/click em qualquer lugar da
+// tela e, se o jogo ja comecou (jogando), ja forca tela cheia + paisagem
+// antes do botao agir. Cooldown curto evita repetir a cada clique.
+var ultimoTapPaisagem=0;
+function forcarPaisagem(){
+  var jg=document.body.classList.contains('jogando')||document.getElementById('tCamp').style.display==='flex';
+  if(!jg)return;
+  var agora=Date.now();
+  if(agora-ultimoTapPaisagem<4000)return;
+  var ativo=document.fullscreenElement||document.webkitFullscreenElement;
+  if(!ativo){
+    var f=document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen;
+    if(f){f.call(document.documentElement).catch(function(){})}
+  }
+  if(screen.orientation&&screen.orientation.lock){screen.orientation.lock('landscape').catch(function(){})}
+  var tap=document.getElementById('fsTap');
+  if(tap){tap.style.display='none';tap.__mostrado=false}
+  ultimoTapPaisagem=agora;
+}
+document.addEventListener('touchstart',forcarPaisagem,true);
+document.addEventListener('click',forcarPaisagem,true);
 function tocarVsSom(){
   if(!somAtivo)return;
   tocarSom(880,0.15);
