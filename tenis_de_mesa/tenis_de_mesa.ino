@@ -51,7 +51,7 @@ const unsigned long intervaloCheckCampeonato = 6000;
 
 // Atualização OTA via GitHub (repo público Jaum4010/PlacarPro)
 const String GITHUB_REPO = "Jaum4010/PlacarPro";   // usuário/repositório
-const String FIRMWARE_VER = "1.1.8";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
+const String FIRMWARE_VER = "1.1.9";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
 const unsigned long INTERVALO_OTA = 24UL * 60UL * 60UL * 1000UL;  // procura nova versão a cada 24h
 HTTPUpdate httpUpdatePro;
 WiFiClientSecure otaClient;  // para HTTPS (GitHub obriga TLS)
@@ -755,6 +755,10 @@ void notificarCliqueFisico() {
   j += ",\"ver\":" + String(VERSAO_PAGINA) + ",\"ota\":\"" + otaStatus + "\",\"otap\":" + String(otaProgresso) + "}";
   for (int i = 0; i < MAX_SSE; i++) {
     if (clienteAtivo(i)) {
+      // Guarda contra travamento: se o celular travou/dormiu, o buffer TCP do
+      // cliente enche e o println() bloquearia o loop inteiro esperando ACK.
+      // Pula o envio quando nao ha espaco no buffer, em vez de travar.
+      if (sseClients[i].availableForWrite() < 64) continue;
       sseClients[i].print("data: ");
       sseClients[i].println(j);
       sseClients[i].println();
@@ -1334,7 +1338,9 @@ void loop() {
         for (int j = 0; j < MAX_DISP; j++) {
           if (disp[j].ultimoPing && disp[j].ip == sseClients[i].remoteIP()) { ativo = true; break; }
         }
-        if (!ativo) { sseClients[i].stop(); mudou = true; }
+        // Cliente sem ping recente OU com buffer TCP cheio (celular dormiu/travou):
+        // desconecta para liberar slot e nunca travar o envio via SSE.
+        if (!ativo || sseClients[i].availableForWrite() < 64) { sseClients[i].stop(); mudou = true; }
       }
     }
     if (mudou) flagNotificar = true;
