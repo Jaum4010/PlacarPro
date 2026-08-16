@@ -8,6 +8,7 @@
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <WiFiClientSecure.h>
@@ -51,7 +52,7 @@ const unsigned long intervaloCheckCampeonato = 6000;
 
 // Atualização OTA via GitHub (repo público Jaum4010/PlacarPro)
 const String GITHUB_REPO = "Jaum4010/PlacarPro";   // usuário/repositório
-const String FIRMWARE_VER = "1.1.9";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
+const String FIRMWARE_VER = "1.2.0";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
 const unsigned long INTERVALO_OTA = 24UL * 60UL * 60UL * 1000UL;  // procura nova versão a cada 24h
 HTTPUpdate httpUpdatePro;
 WiFiClientSecure otaClient;  // para HTTPS (GitHub obriga TLS)
@@ -153,6 +154,22 @@ bool clienteAtivo(int idx) {
     if (disp[j].ultimoPing && disp[j].ip == ip && agora - disp[j].ultimoPing < tempoVidaPing) return true;
   }
   return false;
+}
+
+// WiFiClient/NetworkClient nao implementa availableForWrite() (retorna 0 sempre).
+// Para nao bloquear o loop escrevendo num cliente que nao le (celular dormiu),
+// checamos de forma NAO BLOQUEANTE se o socket esta pronto/graveis via select
+// com timeout zero. Cliente saudavel (lendo) => grava imediatamente; cliente
+// com buffer cheio (dormiu/travou) => pulamos o envio sem esperar ACK.
+bool sseProntoEnviar(int idx) {
+  int fd = sseClients[idx].fd();
+  if (fd < 0) return false;
+  fd_set wfds;
+  FD_ZERO(&wfds);
+  FD_SET(fd, &wfds);
+  struct timeval tv = {0, 0};
+  int r = select(fd + 1, NULL, &wfds, NULL, &tv);
+  return (r > 0) && FD_ISSET(fd, &wfds);
 }
 
 bool partidaFinalizada();
@@ -754,11 +771,11 @@ void notificarCliqueFisico() {
   j += ",\"fin\":" + String(partidaFinalizada() ? "true" : "false");
   j += ",\"ver\":" + String(VERSAO_PAGINA) + ",\"ota\":\"" + otaStatus + "\",\"otap\":" + String(otaProgresso) + "}";
   for (int i = 0; i < MAX_SSE; i++) {
-    if (clienteAtivo(i)) {
-      // Guarda contra travamento: se o celular travou/dormiu, o buffer TCP do
-      // cliente enche e o println() bloquearia o loop inteiro esperando ACK.
-      // Pula o envio quando nao ha espaco no buffer, em vez de travar.
-      if (sseClients[i].availableForWrite() < 64) continue;
+    // Envia apenas se o socket do cliente estiver pronto para gravacao agora
+    // (select com timeout 0). Cliente saudavel que esta lendo => sempre pronto
+    // => sempre recebe. Cliente com buffer cheio (celular dormiu/travou) =>
+    // pulamos o envio em vez de bloquear o loop esperando ACK.
+    if (clienteAtivo(i) && sseProntoEnviar(i)) {
       sseClients[i].print("data: ");
       sseClients[i].println(j);
       sseClients[i].println();
@@ -1338,9 +1355,11 @@ void loop() {
         for (int j = 0; j < MAX_DISP; j++) {
           if (disp[j].ultimoPing && disp[j].ip == sseClients[i].remoteIP()) { ativo = true; break; }
         }
-        // Cliente sem ping recente OU com buffer TCP cheio (celular dormiu/travou):
-        // desconecta para liberar slot e nunca travar o envio via SSE.
-        if (!ativo || sseClients[i].availableForWrite() < 64) { sseClients[i].stop(); mudou = true; }
+        // Cliente sem ping recente (celular dormiu/saiu): desconecta para
+        // liberar slot. Nao desconecta por buffer cheio: cliente ativo com
+        // buffer cheio e so leitura que parou momentaneamente, desconectar
+        // derruba a tela (fica sem atualizar ate interagir).
+        if (!ativo) { sseClients[i].stop(); mudou = true; }
       }
     }
     if (mudou) flagNotificar = true;
