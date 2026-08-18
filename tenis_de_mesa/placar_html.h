@@ -499,17 +499,20 @@ html,body{margin:0;padding:0;background:#0b0f1a;color:#fff;font-family:Arial,Hel
 body{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;box-sizing:border-box}
 h1{font-size:34px;margin:0 0 8px}
 p{color:#9aa5b1;font-size:15px;margin:8px 0 26px;line-height:1.5}
-a.btn{display:block;width:100%;max-width:340px;padding:18px;margin:10px auto;border-radius:14px;text-decoration:none;font-size:18px;font-weight:800;text-align:center;box-sizing:border-box}
+    a.btn{display:block;width:100%;max-width:340px;padding:18px;margin:10px auto;border-radius:14px;text-decoration:none;font-size:18px;font-weight:800;text-align:center;box-sizing:border-box}
 .chrome{background:#1a73e8;color:#fff}
-.web{background:#22c55e;color:#052e16}
 .hint{font-size:13px;color:#7d8894;margin-top:18px}
 </style>
 </head><body>
 <h1>TÊNIS DE MESA</h1>
 <p>Para o placar funcionar em tela cheia e paisagem automática, abra no Google Chrome.</p>
-<a class="btn chrome" href="intent://192.168.4.1/#Intent;scheme=http;package=com.android.chrome;S.browser_fallback_url=http%3A%2F%2F192.168.4.1%2F;end">ABRIR NO CHROME</a>
-<a class="btn web" href="http://192.168.4.1/">ABRIR AQUI MESMO</a>
-<p class="hint">Não abriu no Chrome? Toque nas reticências do navegador, escolha "Abrir no Chrome" ou abra http://192.168.4.1 manualmente.</p>
+<a class="btn chrome" id="btnChrome" href="intent://192.168.4.1/#Intent;scheme=http;package=com.android.chrome;S.browser_fallback_url=http%3A%2F%2F192.168.4.1%2F;end">ABRIR NO CHROME</a>
+<p class="hint">Se não abrir, verifique se o Google Chrome está instalado ou abra http://192.168.4.1 manualmente no Chrome.</p>
+<script>
+if(/iPhone|iPad|iPod/i.test(navigator.userAgent)){
+  document.getElementById('btnChrome').href='googlechrome://192.168.4.1';
+}
+</script>
 </body></html>
 )rawhtml";
 

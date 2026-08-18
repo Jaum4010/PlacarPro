@@ -52,7 +52,7 @@ const unsigned long intervaloCheckCampeonato = 6000;
 
 // Atualização OTA via GitHub (repo público Jaum4010/PlacarPro)
 const String GITHUB_REPO = "Jaum4010/PlacarPro";   // usuário/repositório
-const String FIRMWARE_VER = "1.2.1";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
+const String FIRMWARE_VER = "1.2.2";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
 const unsigned long INTERVALO_OTA = 24UL * 60UL * 60UL * 1000UL;  // procura nova versão a cada 24h
 HTTPUpdate httpUpdatePro;
 WiFiClientSecure otaClient;  // para HTTPS (GitHub obriga TLS)
@@ -953,6 +953,7 @@ void setup() {
              + "\",\"b\":\"" + String(percentualBateria) + "\",\"tensao\":\"" + String(tensaoBateria, 2)
              + "\",\"ssid\":\"" + escapeJson(rotSsid)
              + "\",\"livre\":" + String(!(jogoIniciado || aguardandoInicio || aguardandoConfirmacao) ? "true" : "false")
+             + ",\"cmp\":" + String(campeonatoDetectado ? "true" : "false")
              + ",\"jogA\":\"" + escapeJson(nomeJogadorA) + "\",\"jogB\":\"" + escapeJson(nomeJogadorB)
              + "\",\"camp\":\"" + escapeJson(campeaoAtual) + "\",\"seqN\":" + String(seqResultado) + ",\"seqEntregue\":" + String(seqEntregue)
              + ",\"resultados\":[";
@@ -974,6 +975,40 @@ void setup() {
     ultimoClienteAtivo = millis();
     String acao = server.arg("acao");
     if (acao == "cancelar") {
+      campeaoAtual = "";
+      pontosA = 0; pontosB = 0; setsA = 0; setsB = 0; totalSetsJogados = 0; setsDetalhados = "";
+      historicoJogoAtual = ""; avisoAtual = ""; msgStatus = "";
+      pendNomeA = pendNomeB = pendHistorico = pendSetsDetalhados = "";
+      pendSetsA = pendSetsB = pendTotalSets = 0; pendSaque = 1; pendSacadorInicial = 1;
+      partidaPendenteErro = false; aguardandoConfirmacao = false; aguardandoInicio = false;
+      jogoIniciado = false; sorteioRealizado = false; setFechado = false;
+      quemSaca = 1; sacadorInicial = 1;
+      botoesInvertidos = botoesFisicosInvertidos;
+      notificarCliqueFisico();
+      server.send(200, "application/json", "{\"ok\":true}");
+      return;
+    }
+    if (acao == "campeonato") {
+      // Arma a mesa para o campeonato: trava no modo campeonato e limpa qualquer
+      // jogo em andamento para ja ficar pronta para a proxima chamada.
+      campeonatoDetectado = true;
+      campeaoAtual = "";
+      pontosA = 0; pontosB = 0; setsA = 0; setsB = 0; totalSetsJogados = 0; setsDetalhados = "";
+      historicoJogoAtual = ""; avisoAtual = ""; msgStatus = "";
+      pendNomeA = pendNomeB = pendHistorico = pendSetsDetalhados = "";
+      pendSetsA = pendSetsB = pendTotalSets = 0; pendSaque = 1; pendSacadorInicial = 1;
+      partidaPendenteErro = false; aguardandoConfirmacao = false; aguardandoInicio = false;
+      jogoIniciado = false; sorteioRealizado = false; setFechado = false;
+      quemSaca = 1; sacadorInicial = 1;
+      botoesInvertidos = botoesFisicosInvertidos;
+      notificarCliqueFisico();
+      server.send(200, "application/json", "{\"ok\":true}");
+      return;
+    }
+    if (acao == "avulso") {
+      // Libera a mesa do campeonato: volta ao modo livre para uso normal
+      // (qualquer pessoa pode usar o placar sem regras de campeonato).
+      campeonatoDetectado = false;
       campeaoAtual = "";
       pontosA = 0; pontosB = 0; setsA = 0; setsB = 0; totalSetsJogados = 0; setsDetalhados = "";
       historicoJogoAtual = ""; avisoAtual = ""; msgStatus = "";
