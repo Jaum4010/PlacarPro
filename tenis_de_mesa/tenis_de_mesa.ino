@@ -52,7 +52,7 @@ const unsigned long intervaloCheckCampeonato = 6000;
 
 // Atualização OTA via GitHub (repo público Jaum4010/PlacarPro)
 const String GITHUB_REPO = "Jaum4010/PlacarPro";   // usuário/repositório
-const String FIRMWARE_VER = "1.2.2";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
+const String FIRMWARE_VER = "1.2.3";               // versão deste firmware (tags do repo: v1.0.0, v1.0.1, ...)
 const unsigned long INTERVALO_OTA = 24UL * 60UL * 60UL * 1000UL;  // procura nova versão a cada 24h
 HTTPUpdate httpUpdatePro;
 WiFiClientSecure otaClient;  // para HTTPS (GitHub obriga TLS)
@@ -324,8 +324,8 @@ void enviarResultadoCampeonato() {
 
 void lerBateria() {
   long soma = 0;
-  for (int i = 0; i < 24; i++) { soma += analogRead(pinoBateria); delay(3); }
-  long leitura = soma / 24;
+  for (int i = 0; i < 8; i++) { soma += analogRead(pinoBateria); delay(2); }
+  long leitura = soma / 8;
   long mV = leitura * 3300L / 4095L;            // tensão no pino ADC (0-3.3V)
   tensaoBateria = mV * 2.0 / 1000.0;           // divisor 100k/100k = tensão real x2
   if (tensaoBateria < 0.70) {                    // sem bateria (só USB): oculta o indicador
@@ -812,15 +812,20 @@ void logWifiStatus(const char* rotulo) {
 Serial.print(" srvIP="); Serial.println(srvIP);
 }
 
+// Intervalo entre tentativas de reconexao ao roteador. NAO ser agressivo:
+// cada WiFi.begin() dispara scan de canais que disputa o radio com o AP da
+// mesa, causando retransmissoes/latencia no celular conectado ao AP (avulso
+// sem roteador acessivel ficava lento).
+const unsigned long INTERVALO_RECONEXAO_STA = 60000;
+
 void manterStaConectado() {
   if (rotSsid.length() == 0) return;
   if (WiFi.status() == WL_CONNECTED) { ultimaQuedaSta = 0; return; }
-  if (millis() - ultimaQuedaSta < 5000) return;
+  if (millis() - ultimaQuedaSta < INTERVALO_RECONEXAO_STA) return;
   ultimaQuedaSta = millis();
   logWifiStatus("reconectar");
   Serial.print("[reconectar] tentando "); Serial.println(rotSsid);
-  WiFi.disconnect();
-  WiFi.begin(rotSsid.c_str(), rotSenha.c_str());
+  WiFi.reconnect();  // mais leve que disconnect()+begin(): nao re-arma o radio do AP
 }
 
 void setup() {
@@ -833,7 +838,7 @@ void setup() {
   } else {
     Serial.println("[boot] aviso: rollback nao suportado pelo build (sem marca de validacao)");
   }
-  setCpuFrequencyMhz(80);
+  setCpuFrequencyMhz(160);
   btStop();
   pinMode(pinoBotaoA, INPUT_PULLUP);
   pinMode(pinoBotaoB, INPUT_PULLUP);
@@ -844,7 +849,7 @@ void setup() {
   lerBateria();
   carregarConfig();
   
-  WiFi.setTxPower(WIFI_POWER_11dBm);  // potência fixa alta p/ manter o STA (conexão ao roteador) estável
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);  // potência máxima p/ link celular<->placa forte (sem retransmissões na contagem)
   IPAddress apIP(192, 168, 4, 1);
   WiFi.mode(WIFI_AP_STA);
   mesaSsid = ssidDaMesa();  // SSID automático único por placa (nunca muda → NFC sempre funciona)
@@ -880,16 +885,29 @@ void setup() {
     else if (autenticadoConfig()) servirPagina(paginaConfigHTML(server.arg("tok")));
     else servirPagina(paginaLoginHTML(""));
   };
-  server.on("/generate_204", servirCaptiva);
-  server.on("/hotspot-detect.html", servirCaptiva);
-  server.on("/success.txt", servirCaptiva);
-  server.on("/ncsi.txt", servirCaptiva);
+  auto redirecionarCaptiva = [&]() {
+    // Check de conectividade (Android/iOS) exige um redirecionamento 302:
+    // resposta 200 e tratada como "sem internet" e o portal nao abre.
+    server.sendHeader("Location", "http://192.168.4.1/portal");
+    server.sendHeader("Cache-Control", "no-cache, no-store");
+    server.send(302, "text/html", "");
+  };
+  server.on("/portal", servirCaptiva);
+  server.on("/generate_204", redirecionarCaptiva);
+  server.on("/hotspot-detect.html", redirecionarCaptiva);
+  server.on("/success.txt", redirecionarCaptiva);
+  server.on("/ncsi.txt", redirecionarCaptiva);
+  server.on("/connecttest.txt", redirecionarCaptiva);
+  server.on("/gen_204", redirecionarCaptiva);
+  server.on("/redirect", redirecionarCaptiva);
+  server.on("/chromium-connect", redirecionarCaptiva);
+  server.on("/canonical.html", redirecionarCaptiva);
+  server.on("/library/test/success.html", redirecionarCaptiva);
   server.on("/manifest.json", []() {
     server.sendHeader("Cache-Control", "no-cache");
     server.send(200, "application/manifest+json",
       "{\"name\":\"PLACAR TÉNIS DE MESA\",\"short_name\":\"PLACAR\",\"start_url\":\"/\",\"display\":\"fullscreen\",\"orientation\":\"landscape\",\"background_color\":\"#1e1e24\",\"theme_color\":\"#1e1e24\"}");
   });
-  server.on("/connecttest.txt", servirCaptiva);
   server.on("/login_camp", HTTP_POST, [&]() {
     String s = server.hasArg("senha") ? server.arg("senha") : "";
     if (s == configSenha) {
